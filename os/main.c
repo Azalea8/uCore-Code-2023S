@@ -22,6 +22,7 @@ void clean_bss()
 		*p = 0;
 }
 
+// C的开始
 void main()
 {
 	clean_bss();
