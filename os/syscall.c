@@ -36,9 +36,16 @@ uint64 sys_sched_yield()
 uint64 sys_gettimeofday(TimeVal *val, int _tz) // TODO: implement sys_gettimeofday in pagetable. (VA to PA)
 {
 	// YOUR CODE
-	val->sec = 0;
-	val->usec = 0;
+	struct proc *p = curr_proc();
+	TimeVal kernel_val;
+	TimeVal* dst = &kernel_val;
+	copyin(p -> pagetable, (char *)dst, (uint64)val, sizeof(TimeVal));
+	
+	uint64 cycle = get_cycle();
+	dst->sec = cycle / CPU_FREQ;
+	dst->usec = (cycle % CPU_FREQ) * 1000000 / CPU_FREQ;
 
+	copyout(p -> pagetable, (uint64)val, (char *)dst, sizeof(TimeVal));
 	/* The code in `ch3` will leads to memory bugs*/
 
 	// uint64 cycle = get_cycle();
@@ -65,6 +72,21 @@ uint64 sys_sbrk(int n)
 /*
 * LAB1: you may need to define sys_task_info here
 */
+int sys_task_info(TaskInfo *ti){
+	struct proc *p = curr_proc();
+	TaskInfo kernel_val;
+	TaskInfo* dst = &kernel_val;
+	copyin(p -> pagetable, (char *)dst, (uint64)ti, sizeof(TaskInfo));
+	
+	dst -> status = p -> taskinfo.status;
+	for(int i = 0;i < MAX_SYSCALL_NUM;i++) {
+		dst -> syscall_times[i] = p -> taskinfo.syscall_times[i];
+	}
+	dst -> time = get_time() - (p -> taskinfo.time);
+
+	copyout(p -> pagetable, (uint64)ti, (char *)dst, sizeof(TaskInfo));
+	return 0;
+}
 
 extern char trap_page[];
 
@@ -79,6 +101,9 @@ void syscall()
 	/*
 	* LAB1: you may need to update syscall counter for task info here
 	*/
+	struct proc *p = curr_proc();
+	p -> taskinfo.syscall_times[id]++;
+
 	switch (id) {
 	case SYS_write:
 		ret = sys_write(args[0], args[1], args[2]);
@@ -98,6 +123,9 @@ void syscall()
 	/*
 	* LAB1: you may need to add SYS_taskinfo case here
 	*/
+	case SYS_TASK_INFO:
+			ret = sys_task_info((TaskInfo *)args[0]);
+			break;
 	default:
 		ret = -1;
 		errorf("unknown syscall %d", id);

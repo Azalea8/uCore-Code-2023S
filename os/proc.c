@@ -3,6 +3,7 @@
 #include "loader.h"
 #include "trap.h"
 #include "vm.h"
+#include "timer.h"
 
 struct proc pool[NPROC];
 __attribute__((aligned(16))) char kstack[NPROC][PAGE_SIZE];
@@ -33,6 +34,7 @@ void proc_init(void)
 		/*
 		* LAB1: you may need to initialize your new fields of proc here
 		*/
+		p -> taskinfo.status = UnInit;
 	}
 	idle.kstack = (uint64)boot_stack_top;
 	idle.pid = 0;
@@ -71,6 +73,9 @@ found:
 	memset((void *)p->trapframe, 0, TRAP_PAGE_SIZE);
 	p->context.ra = (uint64)usertrapret;
 	p->context.sp = p->kstack + KSTACK_SIZE;
+
+	memset(&p->taskinfo, 0, sizeof(p->taskinfo));
+	p->taskinfo.status = Ready;
 	return p;
 }
 
@@ -88,6 +93,11 @@ void scheduler(void)
 				/*
 				* LAB1: you may need to init proc start time here
 				*/
+				if (p -> taskinfo.status == Ready) {
+					p -> taskinfo.status = Running;
+					p -> taskinfo.time = get_time();
+				}
+				
 				p->state = RUNNING;
 				current_proc = p;
 				swtch(&idle.context, &p->context);
