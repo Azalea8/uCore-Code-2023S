@@ -39,7 +39,6 @@ uint64 sys_gettimeofday(TimeVal *val, int _tz) // TODO: implement sys_gettimeofd
 	struct proc *p = curr_proc();
 	TimeVal kernel_val;
 	TimeVal* dst = &kernel_val;
-	copyin(p -> pagetable, (char *)dst, (uint64)val, sizeof(TimeVal));
 	
 	uint64 cycle = get_cycle();
 	dst->sec = cycle / CPU_FREQ;
@@ -76,7 +75,6 @@ int sys_task_info(TaskInfo *ti){
 	struct proc *p = curr_proc();
 	TaskInfo kernel_val;
 	TaskInfo* dst = &kernel_val;
-	copyin(p -> pagetable, (char *)dst, (uint64)ti, sizeof(TaskInfo));
 	
 	dst -> status = p -> taskinfo.status;
 	for(int i = 0;i < MAX_SYSCALL_NUM;i++) {
