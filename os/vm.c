@@ -83,6 +83,8 @@ uint64 walkaddr(pagetable_t pagetable, uint64 va)
 		return 0;
 	if ((*pte & PTE_U) == 0)
 		return 0;
+	if(PTE_FLAGS(*pte) == PTE_V)
+		return 0;
 	pa = PTE2PA(*pte);
 	return pa;
 }
@@ -132,10 +134,28 @@ int mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
 	return 0;
 }
 
+int u_mappage(pagetable_t pagetable, uint64 va, uint64 pa, int perm)
+{
+    uint64 a;
+    pte_t *pte;
+    
+    a = PGROUNDDOWN(va);
+
+    if ((pte = walk(pagetable, a, 1)) == 0)
+        return -1;
+    if (*pte & PTE_V){
+        infof("u_mappage: remap\n");
+        return -1;
+    }
+    *pte = PA2PTE(pa) | perm | PTE_V;
+
+    return 0;
+}
+
 // Remove npages of mappings starting from va. va must be
 // page-aligned. The mappings must exist.
 // Optionally free the physical memory.
-int uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
+void uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
 {
 	uint64 a;
 	pte_t *pte;
@@ -144,27 +164,50 @@ int uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
 		panic("uvmunmap: not aligned");
 
 	for (a = va; a < va + npages * PGSIZE; a += PGSIZE) {
-		if ((pte = walk(pagetable, a, 0)) == 0) {
-			errorf("uvmunmap: walk");
-			return -1;
-		}
-		if ((*pte & PTE_V) == 0) {
-			errorf("uvmunmap: not mapped");
-			return -1;
-		}
-		if (PTE_FLAGS(*pte) == PTE_V){
-			panic("uvmunmap: not a leaf");
-		}
-		if (do_free) {
-			uint64 pa = PTE2PA(*pte);
-			kfree((void *)pa);
+		if ((pte = walk(pagetable, a, 0)) == 0)
+			continue;
+		if ((*pte & PTE_V) != 0) {
+			if (PTE_FLAGS(*pte) == PTE_V)
+				panic("uvmunmap: not a leaf");
+			if (do_free) {
+				uint64 pa = PTE2PA(*pte);
+				kfree((void *)pa);
+			}
 		}
 		*pte = 0;
+	}
+}
+
+int u_unmap(pagetable_t pagetable, uint64 va, uint64 npages)
+{
+	uint64 a;
+	pte_t *pte;
+
+	if ((va % PGSIZE) != 0)
+		panic("uvmunmap: not aligned");
+
+	for (a = va; a < va + npages * PGSIZE; a += PGSIZE) {
+		if ((pte = walk(pagetable, a, 0)) == 0){
+            infof("uvmunmap: walk\n");
+            return -1;
+        }
+        if ((*pte & PTE_V) == 0){
+            infof("uvmunmap: not mapped\n");
+            return -1;
+        }
+        if (PTE_FLAGS(*pte) == PTE_V){
+            infof("uvmunmap: not a leaf\n");
+            return -1;
+        }
+        
+        uint64 pa = PTE2PA(*pte);
+        kfree((void *) pa);
+        
+        *pte = 0;
 	}
 
 	return 0;
 }
-
 // create an empty user page table.
 // returns 0 if out of memory.
 pagetable_t uvmcreate()

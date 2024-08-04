@@ -7,9 +7,11 @@
 void kvm_init(void);
 void kvmmap(pagetable_t, uint64, uint64, uint64, int);
 int mappages(pagetable_t, uint64, uint64, uint64, int);
+int u_mappage(pagetable_t, uint64, uint64, int);
 pagetable_t uvmcreate(void);
 void uvmfree(pagetable_t, uint64);
-int uvmunmap(pagetable_t, uint64, uint64, int);
+void uvmunmap(pagetable_t, uint64, uint64, int);
+int u_unmap(pagetable_t, uint64, uint64);
 uint64 walkaddr(pagetable_t, uint64);
 uint64 useraddr(pagetable_t, uint64);
 int copyout(pagetable_t, uint64, char *, uint64);

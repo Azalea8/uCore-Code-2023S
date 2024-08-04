@@ -91,7 +91,7 @@ int sys_mmap(void* start, unsigned long long len, int port, int flag, int fd){
 	while(aligned_len > 0) {
 		void* pa = kalloc();
 
-		if(mappages(p->pagetable, (uint64)start, PGSIZE, (uint64)pa, PTE_U | (port<<1)) < 0) {
+		if(u_mappage(p->pagetable, (uint64)start, (uint64)pa, PTE_U | (port<<1)) < 0) {
 			debugf("sys_mmap mappages fail");
             return -1;
 		}
@@ -114,7 +114,7 @@ int sys_munmap(void* start, unsigned long long len) {
 	struct proc* p = curr_proc();
 	uint64 npages= PGROUNDUP(len) / PGSIZE;
 
-	if(uvmunmap(p->pagetable, va, npages, 1) < 0) {
+	if(u_unmap(p->pagetable, va, npages) < 0) {
 		debugf("sys_munmap mappages fail");
 		return -1;
 	}
