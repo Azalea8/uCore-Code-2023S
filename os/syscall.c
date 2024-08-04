@@ -114,6 +114,82 @@ uint64 sys_sbrk(int n)
         return addr;
 }
 
+
+
+// TODO: add support for mmap and munmap syscall.
+// hint: read through docstrings in vm.c. Watching CH4 video may also help.
+// Note the return value and PTE flags (especially U,X,W,R)
+int sys_mmap(void* start, unsigned long long len, int port, int flag, int fd){
+	if(len == 0) return 0;
+	if(len > 1024*1024*1024){
+        return -1;
+    }
+
+	uint64 offset = (uint64)start & 0xfff;
+    if (offset != 0) {
+        return -1;
+    }
+
+	if( (port & ~0x7) != 0){
+        return -1;
+    }
+    if( (port & 0x7) == 0){
+        return -1;
+    }
+
+	uint64 aligned_len = PGROUNDUP(len);
+	struct proc *p = curr_proc();
+	while(aligned_len > 0) {
+		void* pa = kalloc();
+
+		if(u_mappage(p->pagetable, (uint64)start, (uint64)pa, PTE_U | (port<<1)) < 0) {
+			debugf("sys_mmap mappages fail");
+            return -1;
+		}
+
+		aligned_len -= PGSIZE;
+        start += PGSIZE;
+	}
+	
+	return 0;
+}
+
+int sys_munmap(void* start, unsigned long long len) {
+	uint64 va = (uint64) start;
+
+	uint64 offset = (uint64)start & 0xfff;
+    if (offset != 0) {
+        return -1;
+    }
+
+	struct proc* p = curr_proc();
+	uint64 npages= PGROUNDUP(len) / PGSIZE;
+
+	if(u_unmap(p->pagetable, va, npages) < 0) {
+		debugf("sys_munmap mappages fail");
+		return -1;
+	}
+
+	return 0;
+}
+/*
+* LAB1: you may need to define sys_task_info here
+*/
+int sys_task_info(TaskInfo *ti){
+	struct proc *p = curr_proc();
+	TaskInfo kernel_val;
+	TaskInfo* dst = &kernel_val;
+	
+	dst -> status = p -> taskinfo.status;
+	for(int i = 0;i < MAX_SYSCALL_NUM;i++) {
+		dst -> syscall_times[i] = p -> taskinfo.syscall_times[i];
+	}
+	dst -> time = get_time() - (p -> taskinfo.time);
+
+	copyout(p -> pagetable, (uint64)ti, (char *)dst, sizeof(TaskInfo));
+	return 0;
+}
+
 extern char trap_page[];
 
 void syscall()
@@ -124,6 +200,12 @@ void syscall()
 			   trapframe->a3, trapframe->a4, trapframe->a5 };
 	tracef("syscall %d args = [%x, %x, %x, %x, %x, %x]", id, args[0],
 	       args[1], args[2], args[3], args[4], args[5]);
+	/*
+	* LAB1: you may need to update syscall counter for task info here
+	*/
+	struct proc *p = curr_proc();
+	p -> taskinfo.syscall_times[id]++;
+
 	switch (id) {
 	case SYS_write:
 		ret = sys_write(args[0], args[1], args[2]);
@@ -159,8 +241,20 @@ void syscall()
 		ret = sys_spawn(args[0]);
 		break;
 	case SYS_sbrk:
-                ret = sys_sbrk(args[0]);
-                break;
+		ret = sys_sbrk(args[0]);
+		break;
+	/*
+	* LAB1: you may need to add SYS_taskinfo case here
+	*/
+	case SYS_TASK_INFO:
+			ret = sys_task_info((TaskInfo *)args[0]);
+			break;
+	case SYS_mmap:
+            ret =sys_mmap((void*)args[0], args[1], args[2], args[3], args[4]);
+            break; 
+    case SYS_munmap:
+        ret = sys_munmap((void*)args[0], args[1]);
+        break;
 	default:
 		ret = -1;
 		errorf("unknown syscall %d", id);
