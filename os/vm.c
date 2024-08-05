@@ -58,7 +58,6 @@ pte_t *walk(pagetable_t pagetable, uint64 va, int alloc)
 		} else {
 			if (!alloc || (pagetable = (pde_t *)kalloc()) == 0)
 				return 0;
-			printf("%p || %p\n", pagetable, PA2PTE(pagetable) | PTE_V);
 			memset(pagetable, 0, PGSIZE);
 			*pte = PA2PTE(pagetable) | PTE_V;
 		}
@@ -164,7 +163,6 @@ void uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
 
 	if ((va % PGSIZE) != 0)
 		panic("uvmunmap: not aligned");
-
 	for (a = va; a < va + npages * PGSIZE; a += PGSIZE) {
 		if ((pte = walk(pagetable, a, 0)) == 0)
 			continue;
@@ -239,19 +237,15 @@ void freewalk(pagetable_t pagetable)
 	// there are 2^9 = 512 PTEs in a page table.
 	for (int i = 0; i < 512; i++) {
 		pte_t pte = pagetable[i];
-		printf("%p\n", pte);
 		if ((pte & PTE_V) && (pte & (PTE_R | PTE_W | PTE_X)) == 0) {
-			printf("%p -- %p\n", pte, PTE2PA(pte));
 			// this PTE points to a lower-level page table.
 			uint64 child = PTE2PA(pte);
 			freewalk((pagetable_t)child);
 			pagetable[i] = 0;
 		} else if (pte & PTE_V) {
-			printf("%p -- %p\n", pte, PTE2PA(pte));
-			// panic("freewalk: leaf");
+			panic("freewalk: leaf");
 		}
 	}
-	printf("\n下一级页表\n");
 	kfree((void *)pagetable);
 }
 
