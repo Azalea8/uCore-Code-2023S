@@ -137,10 +137,8 @@ int sys_mmap(void* start, unsigned long long len, int port, int flag, int fd){
         return -1;
     }
 
-	uint64 pages = PGROUNDUP((uint64)start + len - 1) / PAGE_SIZE;
 	uint64 aligned_len = PGROUNDUP(len);
 	struct proc *p = curr_proc();
-	p -> max_page = (p -> max_page < pages) ? pages : p -> max_page;
 
 	while(aligned_len > 0) {
 		void* pa = kalloc();
@@ -154,6 +152,9 @@ int sys_mmap(void* start, unsigned long long len, int port, int flag, int fd){
         start += PGSIZE;
 	}
 	
+	uint64 pages = PGROUNDUP((uint64)start + len - 1) / PAGE_SIZE;
+	p -> max_page = (p -> max_page < pages) ? pages : p -> max_page;
+
 	return 0;
 }
 
