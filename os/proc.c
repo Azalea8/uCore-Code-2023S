@@ -33,9 +33,6 @@ void proc_init()
 		p->state = UNUSED;
 		p->kstack = (uint64)kstack[p - pool];
 		p->trapframe = (struct trapframe *)trapframe[p - pool];
-		/*
-		* LAB1: you may need to initialize your new fields of proc here
-		*/
 		p -> taskinfo.status = UnInit;
 	}
 	idle.kstack = (uint64)boot_stack_top;
@@ -99,6 +96,8 @@ found:
 
 	memset(&p->taskinfo, 0, sizeof(p->taskinfo));
 	p->taskinfo.status = Ready;
+	p -> priority = 16;
+	p -> stride = 0;
 	return p;
 }
 
@@ -109,36 +108,44 @@ found:
 //    via swtch back to the scheduler.
 void scheduler()
 {
-	struct proc *p;
+	struct proc *next_p = NULL;
 	for (;;) {
-		/*int has_proc = 0;
-		for (p = pool; p < &pool[NPROC]; p++) {
+		uint64 min_stride = ~0;
+		for (struct proc *p = pool; p < &pool[NPROC]; p++) {
 			if (p->state == RUNNABLE) {
-				has_proc = 1;
-				tracef("swtich to proc %d", p - pool);
-				p->state = RUNNING;
-				current_proc = p;
-				swtch(&idle.context, &p->context);
+				if(p -> stride < min_stride) {
+					next_p = p;
+					min_stride = p -> stride;
+				}
 			}
 		}
-		if(has_proc == 0) {
-			panic("all app are over!\n");
-		}*/
-		p = fetch_task();
-		if (p == NULL) {
+		if(next_p == NULL) {
 			panic("all app are over!\n");
 		}
-		tracef("swtich to proc %d", p - pool);
-		/*
-		* LAB1: you may need to init proc start time here
-		*/
-		if (p -> taskinfo.status == Ready) {
-			p -> taskinfo.status = Running;
-			p -> taskinfo.time = get_time();
+
+		if (next_p -> taskinfo.status == Ready) {
+			next_p -> taskinfo.status = Running;
+			next_p -> taskinfo.time = get_time();
 		}
-		p->state = RUNNING;
-		current_proc = p;
-		swtch(&idle.context, &p->context);
+		tracef("swtich to proc %d", next_p - pool);
+		next_p -> state = RUNNING;
+		next_p -> stride += BigStride / (next_p -> priority);
+		current_proc = next_p;
+		swtch(&idle.context, &current_proc->context);
+		
+		// p = fetch_task();
+		// if (p == NULL) {
+		// 	panic("all app are over!\n");
+		// }
+		// tracef("swtich to proc %d", p - pool);
+
+		// if (p -> taskinfo.status == Ready) {
+		// 	p -> taskinfo.status = Running;
+		// 	p -> taskinfo.time = get_time();
+		// }
+		// p->state = RUNNING;
+		// current_proc = p;
+		// swtch(&idle.context, &p->context);
 	}
 }
 
@@ -161,7 +168,7 @@ void sched()
 void yield()
 {
 	current_proc->state = RUNNABLE;
-	add_task(current_proc);
+	// add_task(current_proc);
 	sched();
 }
 
@@ -201,7 +208,7 @@ int fork()
 	np->trapframe->a0 = 0;
 	np->parent = p;
 	np->state = RUNNABLE;
-	add_task(np);
+	// add_task(np);
 	return np->pid;
 }
 
@@ -215,6 +222,23 @@ int exec(char *name)
 	p->max_page = 0;
 	loader(id, p);
 	return 0;
+}
+
+int spawn(char *filename) {
+	int id = get_id_by_name(filename);
+	struct proc *np;
+	struct proc *p = curr_proc();
+	if (id < 0 || (np = allocproc()) == 0) {
+		return -1;
+	}
+
+	loader(id, np);
+
+	np -> parent = p;
+	np -> state = RUNNABLE;
+	// add_task(np);
+	return np -> pid;
+
 }
 
 int wait(int pid, int *code)
@@ -243,7 +267,7 @@ int wait(int pid, int *code)
 			return -1;
 		}
 		p->state = RUNNABLE;
-		add_task(p);
+		// add_task(p);
 		sched();
 	}
 }

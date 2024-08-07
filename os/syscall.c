@@ -95,11 +95,19 @@ uint64 sys_wait(int pid, uint64 va)
 uint64 sys_spawn(uint64 va)
 {
 	// TODO: your job is to complete the sys call
-	return -1;
+	struct proc *p = curr_proc();
+	char filename[MAX_STR_LEN];
+	copyinstr(p->pagetable, filename, va, MAX_STR_LEN);
+	debugf("sys_spawn %s\n", filename);
+	return spawn(filename);
 }
 
 uint64 sys_set_priority(long long prio){
-    // TODO: your job is to complete the sys call
+    if(prio >= 2) {
+		struct proc *p = curr_proc();
+		p -> priority = prio;
+		return p -> priority;
+	}
     return -1;
 }
 
@@ -244,12 +252,12 @@ void syscall()
 	case SYS_spawn:
 		ret = sys_spawn(args[0]);
 		break;
+	case SYS_setpriority:
+		ret = sys_set_priority(args[0]);
+		break;
 	case SYS_sbrk:
 		ret = sys_sbrk(args[0]);
 		break;
-	/*
-	* LAB1: you may need to add SYS_taskinfo case here
-	*/
 	case SYS_TASK_INFO:
 			ret = sys_task_info((TaskInfo *)args[0]);
 			break;

@@ -8,6 +8,7 @@
 #define NPROC (512)
 #define FD_BUFFER_SIZE (16)
 #define MAX_SYSCALL_NUM 500
+#define BigStride 65536
 
 struct file;
 
@@ -64,11 +65,9 @@ struct proc {
 	struct file *files[FD_BUFFER_SIZE];
 	uint64 program_brk;
 	uint64 heap_bottom;
-
-	/*
-	* LAB1: you may need to add some new fields here
-	*/
 	TaskInfo taskinfo;
+	long long priority; 
+	uint64 stride;
 };
 
 int cpuid();
@@ -80,6 +79,7 @@ void sched();
 void yield();
 int fork();
 int exec(char *);
+int spawn(char *);
 int wait(int, int *);
 void add_task(struct proc *);
 struct proc *pop_task();
