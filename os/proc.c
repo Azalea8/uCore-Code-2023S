@@ -108,8 +108,8 @@ found:
 //    via swtch back to the scheduler.
 void scheduler()
 {
-	struct proc *next_p = NULL;
 	for (;;) {
+		struct proc *next_p = NULL;
 		uint64 min_stride = ~0;
 		for (struct proc *p = pool; p < &pool[NPROC]; p++) {
 			if (p->state == RUNNABLE) {
