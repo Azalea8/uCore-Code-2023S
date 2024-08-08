@@ -52,7 +52,7 @@ int bin_loader(uint64 start, uint64 end, struct proc *p)
 		}
 		memmove(page, (const void *)pa, PGSIZE);
 		if (pa < start) {
-			memset(page, 0, start - va);
+			memset(page, 0, start - pa);
 		} else if (pa + PAGE_SIZE > end) {
 			memset(page + (end - pa), 0, PAGE_SIZE - (end - pa));
 		}
