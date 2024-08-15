@@ -6,6 +6,8 @@
 
 #define NPROC (512)
 #define FD_BUFFER_SIZE (16)
+#define MAX_SYSCALL_NUM 500
+#define BigStride 65536
 
 struct file;
 
@@ -31,6 +33,22 @@ struct context {
 
 enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
+/*
+* LAB1: you may need to define struct for TaskInfo here
+*/
+typedef enum {
+	UnInit,
+	Ready,
+	Running,
+	Exited,
+} TaskStatus;
+
+typedef struct {
+	TaskStatus status;
+	unsigned int syscall_times[MAX_SYSCALL_NUM];
+	int time;
+} TaskInfo;
+
 // Per-process state
 struct proc {
 	enum procstate state; // Process state
@@ -47,6 +65,9 @@ struct proc {
 		[FD_BUFFER_SIZE]; //File descriptor table, using to record the files opened by the process
 	uint64 program_brk;
 	uint64 heap_bottom;
+	TaskInfo taskinfo;
+	long long priority; 
+	uint64 stride;
 };
 
 int cpuid();
@@ -58,6 +79,7 @@ void sched();
 void yield();
 int fork();
 int exec(char *, char **);
+int spawn(char *);
 int wait(int, int *);
 void add_task(struct proc *);
 struct proc *pop_task();
