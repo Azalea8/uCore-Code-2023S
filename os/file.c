@@ -154,3 +154,41 @@ uint64 inoderead(struct file *f, uint64 va, uint64 len)
 		f->off += r;
 	return r;
 }
+
+uint64 linkat(char *oldpath, char *newpath) {
+	if(strncmp(oldpath, newpath, DIRSIZ) == 0) {
+		return -1;
+	}
+
+	struct inode *ip, *dp;
+	dp = root_dir();
+	ivalid(dp);
+
+	ip = dirlookup(dp, oldpath, 0);
+	ivalid(ip);
+	dirlink(dp, newpath, ip->inum);
+	ip -> nlink++;
+	iupdate(ip);
+
+	iput(ip);
+	iput(dp);
+	return 0;
+}
+
+uint64 unlinkat(char *path) {
+	struct inode *ip, *dp;
+	dp = root_dir();
+	ivalid(dp);
+
+	if((ip = dirlookup(dp, path, 0)) == 0) {
+		return -1;
+	}
+	ivalid(ip);
+	dirunlink(dp, path);
+	ip -> nlink--;
+	iupdate(ip);
+
+	iput(ip);
+	iput(dp);
+	return 0;
+}

@@ -187,20 +187,44 @@ uint64 sys_close(int fd)
 int sys_fstat(int fd, uint64 stat)
 {
 	//TODO: your job is to complete the syscall
-	return -1;
+	if (fd < 0 || fd > FD_BUFFER_SIZE)
+		return -1;
+	struct proc *p = curr_proc();
+	struct file *f = p->files[fd];
+	if (f == NULL) {
+		errorf("invalid fd %d", fd);
+		return -1;
+	}
+	struct stat t;
+	struct inode *ip = f -> ip;
+
+	t.dev = ip->dev;
+	t.ino = ip->inum;
+	t.mode = ip->type == T_DIR ? DIR : FILE;
+	t.nlink = ip->nlink;
+
+	copyout(p->pagetable, stat, (char *)&t, sizeof(struct stat));
+	return 0;
 }
 
 int sys_linkat(int olddirfd, uint64 oldpath, int newdirfd, uint64 newpath,
 	       uint64 flags)
 {
 	//TODO: your job is to complete the syscall
-	return -1;
+	struct proc *p = curr_proc();
+	char old_path[200], new_path[200];
+	copyinstr(p->pagetable, old_path, oldpath, 200);
+	copyinstr(p->pagetable, new_path, newpath, 200);
+	return linkat(old_path, new_path);
 }
 
 int sys_unlinkat(int dirfd, uint64 name, uint64 flags)
 {
 	//TODO: your job is to complete the syscall
-	return -1;
+	struct proc *p = curr_proc();
+	char path[200];
+	copyinstr(p->pagetable, path, name, 200);
+	return unlinkat(path);
 }
 
 uint64 sys_sbrk(int n)
