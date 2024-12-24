@@ -45,6 +45,7 @@ void devintr(uint64 cause)
 		set_next_timer();
 		// if form user, allow yield
 		if ((r_sstatus() & SSTATUS_SPP) == 0) {
+			tracef("Timer Interrupt\n");
 			yield();
 		}
 		break;

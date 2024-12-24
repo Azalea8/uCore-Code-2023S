@@ -209,7 +209,7 @@ found:
 	t->context.ra = (uint64)usertrapret;
 	t->context.sp = t->kstack + KSTACK_SIZE;
 	// we do not add thread to scheduler immediately
-	debugf("allocthread p: %d, o: %d, t: %d, e: %p, sp: %p, spp: %p",
+	debugf("allocthread pid: %d, index: %d, tid: %d, entry: %p, user_va_thread_sp_base: %p, user_pa_thread_sp_base: %p",
 	       p->pid, (p - pool), t->tid, entry, t->ustack,
 	       useraddr(p->pagetable, t->ustack));
 	return tid;
@@ -357,7 +357,7 @@ int push_argv(struct proc *p, char **argv)
 	// only push to main thread
 	struct thread *t = &p->threads[0];
 	uint64 sp = t->ustack + USTACK_SIZE, spb = t->ustack;
-	debugf("[push] sp: %p, spb: %p", sp, spb);
+	debugf("[push] sp: %p, sp_base: %p", sp, spb);
 	// Push argument strings, prepare rest of stack in ustack.
 	for (argc = 0; argv[argc]; argc++) {
 		if (argc >= MAX_ARG_NUM)
