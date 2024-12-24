@@ -11,6 +11,7 @@ __attribute__((aligned(4096))) char trapframe[NPROC][NTHREAD][TRAP_PAGE_SIZE];
 
 extern char boot_stack_top[];
 struct thread *current_thread;
+struct proc process_0;
 struct thread idle;
 struct queue task_queue;
 
@@ -53,8 +54,14 @@ void proc_init()
 	idle.kstack = (uint64)boot_stack_top;
 	current_thread = &idle;
 	// for procid() and threadid()
-	idle.process = pool;
-	idle.tid = -1;
+	idle.process = &process_0;
+	idle.tid = 0;
+	idle.state = T_USED;
+	for(int tid = 1;tid < NTHREAD;tid++) {
+		struct thread *t = &(process_0.threads[tid]);
+		t -> state = T_UNUSED;
+	}
+	
 	init_queue(&task_queue, QUEUE_SIZE, process_queue_data);
 }
 
